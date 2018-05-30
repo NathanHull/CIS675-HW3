@@ -26,6 +26,7 @@ class Lexer {
 	static boolean isComment = false;
 	static boolean isString = false;
 	static StringBuilder buildingString;
+	static boolean wasString = false;
 
 	static List<String> lineTokens;
 
@@ -58,10 +59,10 @@ class Lexer {
 		ops.put("}", "RIGHT-BRACE");
 		ops.put("[", "LEFT-BRACKET");
 		ops.put("]", "RIGHT-BRACKET");
-		ops.put("->", "ARROW");
+		ops.put("->", "EDGEOP");
 		ops.put(";", "SEMICOLON");
 		ops.put("=", "ASSIGNMENT");
-		// ops.put("\"", "QUOTATION-MARK");
+		ops.put("\"", "QUOTATION-MARK");
 		ops.put(",", "COMMA");
 		ops.put("/*", "COMMENT");
 
@@ -72,13 +73,18 @@ class Lexer {
 				lineNumber++;
 				lineTokens = new ArrayList();
 				String tokens[] = line.split(" ");
-				System.out.println("\nLINE: " + line);
+				System.out.println("\nLINE " + lineNumber + ": " + line);
 				for (int x = 0; x < tokens.length; x++) {
 					String token = tokens[x];
 					token = token.trim();
 
 					printToken(token);
 				}
+
+				// List tokens for debugging
+				// for (int i = 0; i < lineTokens.size(); i++) {
+				// 	System.out.println("Index " + i + ": " + lineTokens.get(i));
+				// }
 
 				// Parser: syntax checking
 				// Check for mismatched brackets
@@ -87,14 +93,22 @@ class Lexer {
 				}
 
 				// Check for missing node ID
-				if (lineTokens.contains("ARROW") && !lineTokens.get(lineTokens.indexOf("ARROW")+1).equals("KEYWORD")) {
-					System.out.println("line " + lineNumber + ": Missing target node ID");
+				if (lineTokens.contains("EDGEOP") && !(lineTokens.get(lineTokens.indexOf("EDGEOP")+1).equals("KEYWORD") || lineTokens.get(lineTokens.indexOf("EDGEOP")+1).equals("ID"))) {
+					System.out.println("Line " + lineNumber + ": Missing target node ID");
 				}
 
 				// Check for missing value
-				if (lineTokens.contains("ASSIGNMENT") && !(lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("KEYWORD") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("NUMERIC-VALUE") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("STRING"))) {
-					System.out.println("line " + lineNumber + ": Missing value");
+				for (int i = 0; i < lineTokens.size()-1; i++) {
+					if (lineTokens.get(i).equals("ASSIGNMENT")) {
+					if (lineTokens.get(i+1) == null || !(lineTokens.get(i+1).equals("NUMERIC-VALUE") || lineTokens.get(i+1).equals("STRING") || lineTokens.get(i+1).equals("KEYWORD"))) {
+						System.out.println("Line " + lineNumber + ": Missing value");
+						break;
+					}
+					}
 				}
+				// if (lineTokens.contains("ASSIGNMENT") && !(lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("KEYWORD") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("NUMERIC-VALUE") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("STRING"))) {
+				// 	System.out.println("line " + lineNumber + ": Missing value");
+				// }
 			}
 		} catch (IOException e) {
 			System.out.println("IO Exception");
@@ -117,9 +131,10 @@ class Lexer {
 		if (isString) {
 			if (token.equals("\"")) {
 				isString = false;
+				wasString = true;
 				// System.out.println("STRING: " + buildingString.toString());
 
-				lineTokens.add(buildingString.toString());
+				lineTokens.add("STRING");
 				return;
 			}
 		} else if (isComment) {
@@ -135,11 +150,16 @@ class Lexer {
 		for (char c : token.toCharArray()) {
 
 			if (isString) {
-				if (c == '\"') {
+
+				if (wasString) {
 					isString = false;
+					wasString = false;
+				} else if (c == '\"') {
+					isString = false;
+					wasString = true;
 					// System.out.println("STRING: " + buildingString.toString());
 
-					lineTokens.add(buildingString.toString());
+					lineTokens.add("STRING");
 					continue;
 				} else {
 					buildingString.append(c);
@@ -148,10 +168,15 @@ class Lexer {
 
 				if (c == '\"') {
 					isString = !isString;
-					if (!isString) {
+
+					if (wasString) {
+						isString = false;
+						wasString = false;
+					} else if (!isString) {
+						wasString = true;
 						// System.out.println("STRING: " + buildingString.toString());
 
-						lineTokens.add(buildingString.toString());
+						lineTokens.add("STRING");
 					} else {
 						buildingString = new StringBuilder();
 					}
@@ -204,9 +229,10 @@ class Lexer {
 			} else if (token.equals("\"")) {
 				isString = !isString;
 				if (!isString) {
+					wasString = true;
 					// System.out.println("STRING: " + buildingString.toString());
 
-					lineTokens.add(buildingString.toString());
+					lineTokens.add("STRING");
 				} else {
 					buildingString = new StringBuilder();
 				}
