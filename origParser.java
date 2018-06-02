@@ -19,37 +19,31 @@
 import java.util.*;
 import java.io.*;
 
-class Lexer {
+class Parser {
 
 	static List<String> keywords;
 	static HashMap<String, String> ops;
+	static boolean isComment = false;
+	static boolean isString = false;
 	static StringBuilder buildingString;
+	static boolean wasString = false;
 
-	static boolean isComment;
-	static boolean isString;
-	static boolean wasString;
+	static List<String> lineTokens;
 
-	static List<List<String>> lineTokens;
-	static int lineNumber;
+	public static void main(String[] args) {
 
-	public Lexer() {
-		isComment = false;
-		isString = false;
-		wasString = false;
-
-		lineNumber = 0;
-
-		lineTokens = new ArrayList<List<String>>();
-	}
-
-	static List<List<String>> lexFile(String file) {
+		if (args.length != 1) {
+			System.out.println(args.length);
+			System.out.println("Input error");
+			return;
+		}
 
 		FileReader fr;
 		try {
-			fr = new FileReader(file);
+			fr = new FileReader(args[0]);
 		} catch (Exception e) {
 			System.out.println("Error finding or opening file");
-			return null;
+			return;
 		}
 
 		BufferedReader reader = new BufferedReader(fr);
@@ -72,10 +66,12 @@ class Lexer {
 		ops.put(",", "COMMA");
 		ops.put("/*", "COMMENT");
 
-		System.out.println("Running lexer:");
+		int lineNumber = 0;
+
 		try {
 			while ((line = reader.readLine()) != null) {
-				lineTokens.add(new ArrayList());
+				lineNumber++;
+				lineTokens = new ArrayList();
 				String tokens[] = line.split(" ");
 				System.out.println("\nLINE " + lineNumber + ": " + line);
 				for (int x = 0; x < tokens.length; x++) {
@@ -85,7 +81,34 @@ class Lexer {
 					printToken(token);
 				}
 
-				lineNumber++;
+				// List tokens for debugging
+				// for (int i = 0; i < lineTokens.size(); i++) {
+				// 	System.out.println("Index " + i + ": " + lineTokens.get(i));
+				// }
+
+				// Parser: syntax checking
+				// Check for mismatched brackets
+				if (lineTokens.contains("LEFT-BRACKET") && !lineTokens.contains("RIGHT-BRACKET")) {
+					System.out.println("Line " + lineNumber + ": Missing closing bracket");
+				}
+
+				// Check for missing node ID
+				if (lineTokens.contains("EDGEOP") && !(lineTokens.get(lineTokens.indexOf("EDGEOP")+1).equals("KEYWORD") || lineTokens.get(lineTokens.indexOf("EDGEOP")+1).equals("ID"))) {
+					System.out.println("Line " + lineNumber + ": Missing target node ID");
+				}
+
+				// Check for missing value
+				for (int i = 0; i < lineTokens.size()-1; i++) {
+					if (lineTokens.get(i).equals("ASSIGNMENT")) {
+					if (lineTokens.get(i+1) == null || !(lineTokens.get(i+1).equals("NUMERIC-VALUE") || lineTokens.get(i+1).equals("STRING") || lineTokens.get(i+1).equals("KEYWORD"))) {
+						System.out.println("Line " + lineNumber + ": Missing value");
+						break;
+					}
+					}
+				}
+				// if (lineTokens.contains("ASSIGNMENT") && !(lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("KEYWORD") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("NUMERIC-VALUE") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("STRING"))) {
+				// 	System.out.println("line " + lineNumber + ": Missing value");
+				// }
 			}
 		} catch (IOException e) {
 			System.out.println("IO Exception");
@@ -94,7 +117,7 @@ class Lexer {
 			} catch (IOException f) {
 				System.out.println("Error closing reader");
 			}
-			return null;
+			return;
 		}
 
 		try {
@@ -102,9 +125,6 @@ class Lexer {
 		} catch (IOException e) {
 			System.out.println("Error closing reader");
 		}
-
-		System.out.println("File lexed");
-		return lineTokens;
 	}
 
 	static void printToken(String token) {
@@ -114,7 +134,7 @@ class Lexer {
 				wasString = true;
 				// System.out.println("STRING: " + buildingString.toString());
 
-				lineTokens.get(lineNumber).add("STRING");
+				lineTokens.add("STRING");
 				return;
 			}
 		} else if (isComment) {
@@ -122,7 +142,7 @@ class Lexer {
 				isComment = false;
 				// System.out.println("END-COMMENT");
 
-				lineTokens.get(lineNumber).add("COMMENT");
+				lineTokens.add("COMMENT");
 			}
 			return;
 		}
@@ -139,7 +159,7 @@ class Lexer {
 					wasString = true;
 					// System.out.println("STRING: " + buildingString.toString());
 
-					lineTokens.get(lineNumber).add("STRING");
+					lineTokens.add("STRING");
 					continue;
 				} else {
 					buildingString.append(c);
@@ -156,7 +176,7 @@ class Lexer {
 						wasString = true;
 						// System.out.println("STRING: " + buildingString.toString());
 
-						lineTokens.get(lineNumber).add("STRING");
+						lineTokens.add("STRING");
 					} else {
 						buildingString = new StringBuilder();
 					}
@@ -173,7 +193,7 @@ class Lexer {
 						}
 						// System.out.println(ops.get(Character.toString(c)));
 
-						lineTokens.get(lineNumber).add(ops.get(Character.toString(c)));
+						lineTokens.add(ops.get(Character.toString(c)));
 
 						if (partsAfter.length() >= 1) {
 							printToken(partsAfter);
@@ -181,7 +201,7 @@ class Lexer {
 					} else {
 						// System.out.println(ops.get(Character.toString(c)));
 
-						lineTokens.get(lineNumber).add(ops.get(Character.toString(c)));
+						lineTokens.add(ops.get(Character.toString(c)));
 					}
 
 					return;
@@ -192,7 +212,7 @@ class Lexer {
 		if (keywords.contains(token)) {
 			// System.out.println(token.toUpperCase());
 
-			lineTokens.get(lineNumber).add("KEYWORD");
+			lineTokens.add("KEYWORD");
 			return;
 		} else if (ops.containsKey(token)) {
 
@@ -200,26 +220,26 @@ class Lexer {
 				isComment = true;
 				// System.out.println("COMMENT");
 
-				lineTokens.get(lineNumber).add("COMMENT");
+				lineTokens.add("COMMENT");
 			} else if (token.equals("*/")) {
 				isComment = false;
 				// System.out.println("END-COMMENT");
 
-				lineTokens.get(lineNumber).add("END-COMMENT");
+				lineTokens.add("END-COMMENT");
 			} else if (token.equals("\"")) {
 				isString = !isString;
 				if (!isString) {
 					wasString = true;
 					// System.out.println("STRING: " + buildingString.toString());
 
-					lineTokens.get(lineNumber).add("STRING");
+					lineTokens.add("STRING");
 				} else {
 					buildingString = new StringBuilder();
 				}
 			} else {
 				// System.out.println(ops.get(token));
 
-				lineTokens.get(lineNumber).add(ops.get(token));
+				lineTokens.add(ops.get(token));
 			}
 
 			return;
@@ -230,7 +250,7 @@ class Lexer {
 			Double.parseDouble(token);
 			// System.out.println("NUMERIC-VALUE");
 
-			lineTokens.get(lineNumber).add("NUMERIC-VALUE");
+			lineTokens.add("NUMERIC-VALUE");
 			return;
 		} catch (NumberFormatException nfe) {
 		}
@@ -238,6 +258,6 @@ class Lexer {
 		// Otherwise, it's an ID
 		// System.out.println("ID");
 
-		lineTokens.get(lineNumber).add("ID");
+		lineTokens.add("ID");
 	}
 }

@@ -1,3 +1,4 @@
-all: lexer.java
+all: lexer.java parser.java
 	javac lexer.java
-	java Lexer input.txt
+	javac parser.java
+	java Parser input.txt
