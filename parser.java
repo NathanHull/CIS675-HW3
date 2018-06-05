@@ -16,13 +16,37 @@
 // 		execute -> compare;
 // }
 
+// Grammar
+// 	graph 	: 	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
+// 	stmt_list 	: 	[ stmt [ ';' ] stmt_list ]
+// 	stmt 	: 	node_stmt
+// 	| 	edge_stmt
+// 	| 	attr_stmt
+// 	| 	ID '=' ID
+// 	| 	subgraph
+// 	attr_stmt 	: 	(graph | node | edge) attr_list
+// 	attr_list 	: 	'[' [ a_list ] ']' [ attr_list ]
+// 	a_list 	: 	ID '=' ID [ (';' | ',') ] [ a_list ]
+// 	edge_stmt 	: 	(node_id | subgraph) edgeRHS [ attr_list ]
+// 	edgeRHS 	: 	edgeop (node_id | subgraph) [ edgeRHS ]
+// 	node_stmt 	: 	node_id [ attr_list ]
+// 	node_id 	: 	ID [ port ]
+// 	port 	: 	':' ID [ ':' compass_pt ]
+// 	| 	':' compass_pt
+// 	subgraph 	: 	[ subgraph [ ID ] ] '{' stmt_list '}'
+// 	compass_pt 	: 	(n | ne | e | se | s | sw | w | nw | c | _)
+
 import java.util.*;
+
 import java.io.*;
 
 class Parser {
 
-	static StringBuilder buildingString;
-	static List<String> lineTokens;
+	static List<List<String>> lines;
+	static String currentToken = "";
+	static int lineNumber = 0;
+	static int tokenNumber = 0;
+	static int checkCtr = 0;
 
 	public static void main(String[] args) {
 
@@ -32,226 +56,250 @@ class Parser {
 			return;
 		}
 
-		FileReader fr;
-		try {
-			fr = new FileReader(args[0]);
-		} catch (Exception e) {
-			System.out.println("Error finding or opening file");
-			return;
+		System.out.println("Lexing file " + args[0]);
+		lines = Lexer.lexFile(args[0]);
+
+		if (lines.size() > 0) {
+			currentToken = lines.get(0).get(0);
 		}
 
-		BufferedReader reader = new BufferedReader(fr);
-		String line = "";
+		System.out.println("\n============");
+		System.out.println("Parsing file");
 
-		// instantiate sets of keywords/ops
-		keywords = Arrays.asList("digraph", "graph", "subgraph", "strict", "node", "edge", "shape", "box", "parse",
-				"weight", "init", "style", "dotted", "cleanup", "make_string", "init", "printf", "bold", "label",
-				"filled", "color", "execute", "compare");
+		lineNumber = 0;
+		tokenNumber = 0;
+		checkCtr = 0;
 
-		ops = new HashMap();
-		ops.put("{", "LEFT-BRACE");
-		ops.put("}", "RIGHT-BRACE");
-		ops.put("[", "LEFT-BRACKET");
-		ops.put("]", "RIGHT-BRACKET");
-		ops.put("->", "EDGEOP");
-		ops.put(";", "SEMICOLON");
-		ops.put("=", "ASSIGNMENT");
-		ops.put("\"", "QUOTATION-MARK");
-		ops.put(",", "COMMA");
-		ops.put("/*", "COMMENT");
+		parseGraph();
+	}
 
-		int lineNumber = 0;
-
-		try {
-			while ((line = reader.readLine()) != null) {
-				lineNumber++;
-				lineTokens = new ArrayList();
-				String tokens[] = line.split(" ");
-				System.out.println("\nLINE " + lineNumber + ": " + line);
-				for (int x = 0; x < tokens.length; x++) {
-					String token = tokens[x];
-					token = token.trim();
-
-					printToken(token);
-				}
-
-				// List tokens for debugging
-				// for (int i = 0; i < lineTokens.size(); i++) {
-				// 	System.out.println("Index " + i + ": " + lineTokens.get(i));
-				// }
-
-				// Parser: syntax checking
-				// Check for mismatched brackets
-				if (lineTokens.contains("LEFT-BRACKET") && !lineTokens.contains("RIGHT-BRACKET")) {
-					System.out.println("Line " + lineNumber + ": Missing closing bracket");
-				}
-
-				// Check for missing node ID
-				if (lineTokens.contains("EDGEOP") && !(lineTokens.get(lineTokens.indexOf("EDGEOP")+1).equals("KEYWORD") || lineTokens.get(lineTokens.indexOf("EDGEOP")+1).equals("ID"))) {
-					System.out.println("Line " + lineNumber + ": Missing target node ID");
-				}
-
-				// Check for missing value
-				for (int i = 0; i < lineTokens.size()-1; i++) {
-					if (lineTokens.get(i).equals("ASSIGNMENT")) {
-					if (lineTokens.get(i+1) == null || !(lineTokens.get(i+1).equals("NUMERIC-VALUE") || lineTokens.get(i+1).equals("STRING") || lineTokens.get(i+1).equals("KEYWORD"))) {
-						System.out.println("Line " + lineNumber + ": Missing value");
-						break;
-					}
-					}
-				}
-				// if (lineTokens.contains("ASSIGNMENT") && !(lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("KEYWORD") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("NUMERIC-VALUE") || lineTokens.get(lineTokens.indexOf("ASSIGNMENT")+1).equals("STRING"))) {
-				// 	System.out.println("line " + lineNumber + ": Missing value");
-				// }
-			}
-		} catch (IOException e) {
-			System.out.println("IO Exception");
-			try {
-				reader.close();
-			} catch (IOException f) {
-				System.out.println("Error closing reader");
-			}
-			return;
+	// Check if next token is sent string, if so move forward
+	static boolean accept(String token) {
+		boolean isMatching;
+		checkCtr++;
+		if (checkCtr > 100) {
+			System.out.println("Line " + lineNumber + ": infinite loop error");
 		}
 
-		try {
-			reader.close();
-		} catch (IOException e) {
-			System.out.println("Error closing reader");
+		if (currentToken.equals(token)) {
+			isMatching = true;
+			checkCtr = 0;
+
+			// If more tokens, iterate forward
+			if (!currentToken.equals("EOF")) {
+				tokenNumber++;
+				if (tokenNumber >= lines.get(lineNumber).size()) {
+					lineNumber++;
+					tokenNumber = 0;
+		
+					if (lineNumber >= lines.size()) {
+						currentToken = "EOF";
+					}
+				}
+
+				currentToken = lines.get(lineNumber).get(tokenNumber);
+			}
+		} else {
+			isMatching = false;
+		}
+
+		return isMatching;
+	}
+
+	static void parseGraph() {
+		if (accept("STRICT")) {
+			// Is strict
+		}
+		
+		if (accept("GRAPH")) {
+			// Is graph
+		} else if (accept("DIGRAPH")) {
+			// Is digraph
+		} else {
+			// Error: graph or digraph required
+			System.out.println("Line " + lineNumber + ": missing graph or digraph keyword");
+			System.exit(1);
+		}
+
+		if (!accept("ID")) {
+			// Error: missing graph ID
+			System.out.println("Line " + lineNumber + ": missing graph ID");
+			System.exit(1);
+		}
+
+		if (accept("LEFT-BRACE")) {
+			// Begin graph description
+			parseStmtList();
+		} else {
+			System.out.println("Line " + lineNumber + ": missing left bracket");
+			System.exit(1);
 		}
 	}
 
-	static void printToken(String token) {
-		if (isString) {
-			if (token.equals("\"")) {
-				isString = false;
-				wasString = true;
-				// System.out.println("STRING: " + buildingString.toString());
-
-				lineTokens.add("STRING");
-				return;
-			}
-		} else if (isComment) {
-			if (token.equals("*/")) {
-				isComment = false;
-				// System.out.println("END-COMMENT");
-
-				lineTokens.add("COMMENT");
-			}
-			return;
-		}
-
-		for (char c : token.toCharArray()) {
-
-			if (isString) {
-
-				if (wasString) {
-					isString = false;
-					wasString = false;
-				} else if (c == '\"') {
-					isString = false;
-					wasString = true;
-					// System.out.println("STRING: " + buildingString.toString());
-
-					lineTokens.add("STRING");
-					continue;
+	static void parseStmtList() {
+		if (accept("ID")) {
+			// can be node_stmt, edge_stmt, or ID '=' ID
+			parseNodeId();
+			if (accept("GRAPH") || accept("NODE") || accept("EDGE")) {
+				// is attr_stmt
+				if (accept("LEFT-BRACKET")) {
+					parseAttrList();
 				} else {
-					buildingString.append(c);
+					System.out.println("Line " + lineNumber + ": missing attr_stmt brace");
 				}
-			} else {
-
-				if (c == '\"') {
-					isString = !isString;
-
-					if (wasString) {
-						isString = false;
-						wasString = false;
-					} else if (!isString) {
-						wasString = true;
-						// System.out.println("STRING: " + buildingString.toString());
-
-						lineTokens.add("STRING");
-					} else {
-						buildingString = new StringBuilder();
-					}
-					return;
+			} else if (accept("EDGEOP")) {
+				// is edgeRHS
+				parseEdgeRHS();
+				if (accept("LEFT-BRACKET")) {
+					parseAttrList();
 				}
-
-				if (ops.containsKey(Character.toString(c))) {
-					if (token.length() > 1) {
-						String partsBefore = token.substring(0, token.indexOf(c)).trim();
-						String partsAfter = token.substring(token.indexOf(c) + 1).trim();
-
-						if (partsBefore.length() >= 1) {
-							printToken(partsBefore);
-						}
-						// System.out.println(ops.get(Character.toString(c)));
-
-						lineTokens.add(ops.get(Character.toString(c)));
-
-						if (partsAfter.length() >= 1) {
-							printToken(partsAfter);
-						}
-					} else {
-						// System.out.println(ops.get(Character.toString(c)));
-
-						lineTokens.add(ops.get(Character.toString(c)));
-					}
-
-					return;
+			} else if (accept("ASSIGNMENT")) {
+				// is ID '=' ID
+				if (!accept("ID")) {
+					System.out.println("Line " + lineNumber + ": missing ID after assignment");
+					System.exit(1);
 				}
+			} else if (accept("LEFT-BRACKET")) {
+				// is node_stmt
+				parseAttrList();
+			}
+		} else if (accept("SUBGRAPH")) {
+			parseSubgraph();
+		} else if (accept("LEFT-BRACE")) {
+			// move r-value subgraph up to this level
+			parseStmtList();
+			if (!accept("RIGHT-BRACE")) {
+				System.out.println("Line " + lineNumber + ": missing closing brace");
+				System.exit(1);
 			}
 		}
 
-		if (keywords.contains(token)) {
-			// System.out.println(token.toUpperCase());
+		// Optional after each statement
+		accept("SEMICOLON");
 
-			lineTokens.add("KEYWORD");
-			return;
-		} else if (ops.containsKey(token)) {
-
-			if (token.equals("/*")) {
-				isComment = true;
-				// System.out.println("COMMENT");
-
-				lineTokens.add("COMMENT");
-			} else if (token.equals("*/")) {
-				isComment = false;
-				// System.out.println("END-COMMENT");
-
-				lineTokens.add("END-COMMENT");
-			} else if (token.equals("\"")) {
-				isString = !isString;
-				if (!isString) {
-					wasString = true;
-					// System.out.println("STRING: " + buildingString.toString());
-
-					lineTokens.add("STRING");
-				} else {
-					buildingString = new StringBuilder();
-				}
+		// Check if finished
+		if (accept("RIGHT-BRACE")) {
+			// End graph
+			// No error if no stmt in stmt_list
+			if (accept("EOF")) {
+				// Finished
+				System.out.println("No errors found");
+				System.exit(0);
 			} else {
-				// System.out.println(ops.get(token));
-
-				lineTokens.add(ops.get(token));
+				// Error: code after finish
+				System.out.println("Line " + lineNumber + ": code after program termination");
+				System.exit(1);
 			}
-
-			return;
+		} else if (accept("EOF")) {
+			// Error: missing closing bracket
+			System.out.println("Line " + lineNumber + ": missing closing brace");
+			System.exit(1);
+		} else {
+			parseStmtList();
 		}
-
-		// If it's a number...
-		try {
-			Double.parseDouble(token);
-			// System.out.println("NUMERIC-VALUE");
-
-			lineTokens.add("NUMERIC-VALUE");
-			return;
-		} catch (NumberFormatException nfe) {
-		}
-
-		// Otherwise, it's an ID
-		// System.out.println("ID");
-
-		lineTokens.add("ID");
 	}
+
+	static void parseNodeId() {
+		if (accept("COLON")) {
+			parsePort();
+		}
+	}
+
+	static void parsePort() {
+		if (accept("ID")) {
+			if (accept("COLON")) {
+				parseCompassPt();
+			}
+		} else {
+			System.out.println("Line " + lineNumber + ": missing port ID");
+			System.exit(1);
+		}
+	}
+	
+	static void parseCompassPt() {
+		if (accept("N") || accept("NE") || accept("E") || accept("SE") || accept("S") || accept("SW") || accept("W") || accept("NW") || accept("C") || accept("_")) {
+			// is valid compass point
+		} else {
+			System.out.println("Line " + lineNumber + ": invalid compass point");
+			System.exit(1);
+		}
+	}
+
+	static void parseAttrList() {
+		if (accept("ID")) {
+			parseAList();
+		}
+		if (accept("LEFT-BRACKET")) {
+			parseAttrList();
+		}
+		if (!accept("RIGHT-BRACKET")) {
+			System.out.println("Line " + lineNumber + ": missing closing bracket");
+			System.exit(1);
+		}
+	}
+
+	static void parseAList() {
+		if (accept("ASSIGNMENT")) {
+			if (accept("ID")) {
+				// Optionals
+				// accept("SEMICOLON");
+				accept("COMMA");
+				if (accept("ID")) {
+					parseAList();
+				}
+			} else {
+				System.out.println("Line " + lineNumber + ": missing assigned value");
+				System.exit(1);
+			}
+		} else {
+			System.out.println("Line " + lineNumber + ": missing assignment");
+			System.exit(1);
+		}
+	}
+
+	static void parseEdgeRHS() {
+		if (accept("ID") || accept("SUBGRAPH")) {
+			parseNodeId();
+			if (accept("EDGEOP")) {
+				parseEdgeRHS();
+			}
+		} else {
+			System.out.println("Line " + lineNumber + ": missing target node ID");
+			System.exit(1);
+		}
+	}
+
+	static void parseSubgraph() {
+		accept("ID");
+		if (accept("LEFT-BRACKET")) {
+			parseStmtList();
+			if (!accept("RIGHT-BRACKET")) {
+				System.out.println("Line " + lineNumber + ": missing closing bracket");
+				System.exit(1);
+			}
+		} else {
+			System.out.println("Line " + lineNumber + ": missing bracket");
+			System.exit(1);
+		}
+	}
+
+	// Grammar
+// 	graph 	: 	[ strict ] (graph | digraph) [ ID ] '{' stmt_list '}'
+// 	stmt_list 	: 	[ stmt [ ';' ] stmt_list ]
+// 	stmt 	: 	node_stmt
+// 	| 	edge_stmt
+// 	| 	attr_stmt
+// 	| 	ID '=' ID
+// 	| 	subgraph
+// 	attr_stmt 	: 	(graph | node | edge) attr_list
+// 	attr_list 	: 	'[' [ a_list ] ']' [ attr_list ]
+// 	a_list 	: 	ID '=' ID [ (';' | ',') ] [ a_list ]
+// 	edge_stmt 	: 	(node_id | subgraph) edgeRHS [ attr_list ]
+// 	edgeRHS 	: 	edgeop (node_id | subgraph) [ edgeRHS ]
+// 	node_stmt 	: 	node_id [ attr_list ]
+// 	node_id 	: 	ID [ port ]
+// 	port 	: 	':' ID [ ':' compass_pt ]
+// 	| 	':' compass_pt
+// 	subgraph 	: 	[ subgraph [ ID ] ] '{' stmt_list '}'
+// 	compass_pt 	: 	(n | ne | e | se | s | sw | w | nw | c | _)
 }

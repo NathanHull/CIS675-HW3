@@ -1,0 +1,264 @@
+HW3$ javac Lexer.java
+HW3$ javac Parser.java
+HW3$ cat cleanInput.txt 
+digraph G {
+	main [shape=box]; /* this is a comment */
+	main -> parse [weight=8];
+	parse -> execute;
+	main -> init [style=dotted];
+	main -> cleanup;
+	execute -> make_string;
+	init -> make_string;
+	main -> printf [style=bold,label="100 times"];
+	make_string [label="make a\nstring"];
+	node [shape=box,style=filled,color=".7 .3 1.0"];
+	execute -> compare;
+}
+HW3$ java Parser cleanInput.txt 
+Lexing file cleanInput.txt
+
+============
+Running lexer:
+
+LINE 0: digraph G {
+DIGRAPH ID LEFT-BRACE 
+
+LINE 1: 	main [shape=box]; /* this is a comment */
+ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 2: 	main -> parse [weight=8];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 3: 	parse -> execute;
+ID EDGEOP ID SEMICOLON 
+
+LINE 4: 	main -> init [style=dotted];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 5: 	main -> cleanup;
+ID EDGEOP ID SEMICOLON 
+
+LINE 6: 	execute -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 7: 	init -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 8: 	main -> printf [style=bold,label="100 times"];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 9: 	make_string [label="make a\nstring"];
+ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 10: 	node [shape=box,style=filled,color=".7 .3 1.0"];
+ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 11: 	execute -> compare;
+ID EDGEOP ID SEMICOLON 
+
+LINE 12: }
+RIGHT-BRACE 
+File lexed
+
+============
+Parsing file
+No errors found
+HW3$ 
+HW3$ 
+HW3$ cat errorInput1.txt 
+digraph G {
+	main [shape=box; /* this is a comment */
+	main -> parse [weight=8];
+	parse -> execute;
+	main -> init [style=dotted];
+	main -> cleanup;
+	execute -> make_string;
+	init -> make_string;
+	main -> printf [style=bold,label="100 times"];
+	make_string [label="make a\nstring"];
+	node [shape=box,style=filled,color=".7 .3 1.0"];
+	execute -> compare;
+}
+2HW3$ java Parser errorInput1.txt 
+Lexing file errorInput1.txt
+
+============
+Running lexer:
+
+LINE 0: digraph G {
+DIGRAPH ID LEFT-BRACE 
+
+LINE 1: 	main [shape=box; /* this is a comment */
+ID LEFT-BRACKET ID ASSIGNMENT ID SEMICOLON 
+
+LINE 2: 	main -> parse [weight=8];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 3: 	parse -> execute;
+ID EDGEOP ID SEMICOLON 
+
+LINE 4: 	main -> init [style=dotted];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 5: 	main -> cleanup;
+ID EDGEOP ID SEMICOLON 
+
+LINE 6: 	execute -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 7: 	init -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 8: 	main -> printf [style=bold,label="100 times"];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 9: 	make_string [label="make a\nstring"];
+ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 10: 	node [shape=box,style=filled,color=".7 .3 1.0"];
+ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 11: 	execute -> compare;
+ID EDGEOP ID SEMICOLON 
+
+LINE 12: }
+RIGHT-BRACE 
+
+LINE 13: 2
+ID 
+File lexed
+
+============
+Parsing file
+Line 1: missing closing bracket
+HW3$ 
+HW3$ 
+HW3$ cat errorInput2.txt 
+digraph G {
+	main [shape=box]; /* this is a comment */
+	main -> parse [weight=8];
+	parse -> execute;
+	main -> [style=dotted];
+	main -> cleanup;
+	execute -> make_string;
+	init -> make_string;
+	main -> printf [style=bold,label="100 times"];
+	make_string [label="make a\nstring"];
+	node [shape=box,style=filled,color=".7 .3 1.0"];
+	execute -> compare;
+}
+HW3$ java Parser errorInput2.txt 
+Lexing file errorInput2.txt
+
+============
+Running lexer:
+
+LINE 0: digraph G {
+DIGRAPH ID LEFT-BRACE 
+
+LINE 1: 	main [shape=box]; /* this is a comment */
+ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 2: 	main -> parse [weight=8];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 3: 	parse -> execute;
+ID EDGEOP ID SEMICOLON 
+
+LINE 4: 	main -> [style=dotted];
+ID EDGEOP LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 5: 	main -> cleanup;
+ID EDGEOP ID SEMICOLON 
+
+LINE 6: 	execute -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 7: 	init -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 8: 	main -> printf [style=bold,label="100 times"];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 9: 	make_string [label="make a\nstring"];
+ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 10: 	node [shape=box,style=filled,color=".7 .3 1.0"];
+ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 11: 	execute -> compare;
+ID EDGEOP ID SEMICOLON 
+
+LINE 12: }
+RIGHT-BRACE 
+File lexed
+
+============
+Parsing file
+Line 4: missing target node ID
+HW3$ 
+HW3$ 
+HW3$ cat errorInput3.txt 
+digraph G {
+	main [shape=box]; /* this is a comment */
+	main -> parse [weight=8];
+	parse -> execute;
+	main -> init [style=dotted];
+	main -> cleanup;
+	execute -> make_string;
+	init -> make_string;
+	main -> printf [style=bold,label=];
+	make_string [label="make a\nstring"];
+	node [shape=box,style=filled,color=".7 .3 1.0"];
+	execute -> compare;
+}
+HW3$ java Parser errorInput3.txt 
+Lexing file errorInput3.txt
+
+============
+Running lexer:
+
+LINE 0: digraph G {
+DIGRAPH ID LEFT-BRACE 
+
+LINE 1: 	main [shape=box]; /* this is a comment */
+ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 2: 	main -> parse [weight=8];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 3: 	parse -> execute;
+ID EDGEOP ID SEMICOLON 
+
+LINE 4: 	main -> init [style=dotted];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 5: 	main -> cleanup;
+ID EDGEOP ID SEMICOLON 
+
+LINE 6: 	execute -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 7: 	init -> make_string;
+ID EDGEOP ID SEMICOLON 
+
+LINE 8: 	main -> printf [style=bold,label=];
+ID EDGEOP ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT RIGHT-BRACKET SEMICOLON 
+
+LINE 9: 	make_string [label="make a\nstring"];
+ID LEFT-BRACKET ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 10: 	node [shape=box,style=filled,color=".7 .3 1.0"];
+ID LEFT-BRACKET ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID COMMA ID ASSIGNMENT ID RIGHT-BRACKET SEMICOLON 
+
+LINE 11: 	execute -> compare;
+ID EDGEOP ID SEMICOLON 
+
+LINE 12: }
+RIGHT-BRACE 
+File lexed
+
+============
+Parsing file
+Line 8: missing assigned value
+HW3$ 
