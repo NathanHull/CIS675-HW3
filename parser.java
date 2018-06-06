@@ -134,9 +134,35 @@ class Parser {
 			System.out.println("Line " + lineNumber + ": missing left bracket");
 			System.exit(1);
 		}
+
+		// Check if finished
+		if (accept("RIGHT-BRACE")) {
+			// End graph
+			// No error if no stmt in stmt_list
+			if (accept("EOF")) {
+				// Finished
+				System.out.println("No errors found");
+				System.exit(0);
+			} else {
+				// Error: code after finish
+				System.out.println("Line " + lineNumber + ": code after program termination");
+				System.exit(1);
+			}
+		} else if (accept("EOF")) {
+			// Error: missing closing bracket
+			System.out.println("Line " + lineNumber + ": missing closing brace");
+			System.exit(1);
+		}
 	}
 
 	static void parseStmtList() {
+		parseStmt();
+		if (accept("SEMICOLON")) {
+			parseStmtList();
+		}
+	}
+
+	static void parseStmt() {
 		if (accept("ID")) {
 			// can be node_stmt, edge_stmt, or ID '=' ID
 			parseNodeId();
@@ -172,30 +198,6 @@ class Parser {
 				System.out.println("Line " + lineNumber + ": missing closing brace");
 				System.exit(1);
 			}
-		}
-
-		// Optional after each statement
-		accept("SEMICOLON");
-
-		// Check if finished
-		if (accept("RIGHT-BRACE")) {
-			// End graph
-			// No error if no stmt in stmt_list
-			if (accept("EOF")) {
-				// Finished
-				System.out.println("No errors found");
-				System.exit(0);
-			} else {
-				// Error: code after finish
-				System.out.println("Line " + lineNumber + ": code after program termination");
-				System.exit(1);
-			}
-		} else if (accept("EOF")) {
-			// Error: missing closing bracket
-			System.out.println("Line " + lineNumber + ": missing closing brace");
-			System.exit(1);
-		} else {
-			parseStmtList();
 		}
 	}
 
